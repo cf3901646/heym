@@ -438,17 +438,26 @@ class JiraService:
         headers: dict[str, str] | None = None,
         expect_json: bool = True,
     ) -> Any:
-        email = str(self._config.get("email", "") or "").strip()
-        api_token = str(
-            self._config.get("api_token", "") or self._config.get("api_key", "") or ""
-        ).strip()
-        if not email or not api_token:
-            raise ValueError("Jira credential requires email and api_token")
+        auth_mode = str(self._config.get("auth_mode", "") or "").strip().lower()
+        pat_token = str(self._config.get("pat_token", "") or "").strip()
+        
         request_headers = {"Accept": "application/json"}
         if files is None:
             request_headers["Content-Type"] = "application/json"
         if headers:
             request_headers.update(headers)
+            
+        if auth_mode == "bearer" and pat_token:
+            request_headers["Authorization"] = f"Bearer {pat_token}"
+        else:
+            email = str(self._config.get("email", "") or "").strip()
+            api_token = str(
+                self._config.get("api_token", "") or self._config.get("api_key", "") or ""
+            ).strip()
+            if not email or not api_token:
+                raise ValueError("Jira credential requires email and api_token for Basic auth")
+            request_headers["Authorization"] = f"Basic {httpx.BasicAuth(email, api_token).auth}"
+            
         try:
             response = self._client.request(
                 method,
@@ -456,7 +465,6 @@ class JiraService:
                 params=params,
                 json=json,
                 files=files,
-                auth=(email, api_token),
                 headers=request_headers,
             )
             response.raise_for_status()

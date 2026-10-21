@@ -185,6 +185,10 @@ def merge_credential_config_for_update(
             incoming_value = str(incoming_config.get(key, "") or "").strip()
             if incoming_value:
                 merged_config[key] = incoming_value
+        for key in ("auth_mode", "pat_token"):
+            incoming_value = str(incoming_config.get(key, "") or "").strip()
+            if incoming_value:
+                merged_config[key] = incoming_value
         return merged_config
 
     if credential_type == CredentialType.slack_bot:
